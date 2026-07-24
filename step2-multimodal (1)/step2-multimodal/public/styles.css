@@ -1,0 +1,113 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #0f1720;
+  color: #e7edf6;
+}
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.muted {
+  color: #93a6bb;
+}
+
+.muted.small {
+  font-size: 0.9rem;
+  margin: 0 0 10px;
+}
+
+.sep-label {
+  margin: 16px 0 8px;
+}
+
+.card {
+  background: #17212b;
+  border: 1px solid #2b3a49;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+textarea,
+input[type="file"] {
+  background: #0f1720;
+  color: #e7edf6;
+  border: 1px solid #33485c;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+button {
+  width: fit-content;
+  background: #37d487;
+  color: #0c1712;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.voice-live {
+  margin-bottom: 8px;
+}
+
+.voice-live-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-rec {
+  min-width: 140px;
+}
+
+.btn-stop {
+  background: #f87171;
+  color: #1a0a0a;
+}
+
+.btn-stop:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
+.rec-status {
+  margin: 8px 0 0;
+  min-height: 1.4em;
+  font-size: 0.95rem;
+  color: #93a6bb;
+}
+
+.rec-status.rec-on {
+  color: #f87171;
+  font-weight: 700;
+}
+
+pre {
+  white-space: pre-wrap;
+  background: #0f1720;
+  border: 1px solid #33485c;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 100px;
+}

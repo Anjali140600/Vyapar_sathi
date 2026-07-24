@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vyapar Sathi - Step 2 Multimodal</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Step 2: Multimodal Input to Text</h1>
+      <p class="muted">
+        Goal: convert user input from text, voice, or image into accurate text.
+      </p>
+
+      <section class="card">
+        <h2>1) Text Input</h2>
+        <form id="textForm">
+          <textarea id="textInput" rows="4" placeholder="Type your query..."></textarea>
+          <button type="submit">Use Text</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>2) Voice Input</h2>
+        <p class="muted small">
+          Record with your microphone (sent to this PC; Whisper runs locally — no paid API), or upload a file.
+        </p>
+        <div class="voice-live" aria-live="polite">
+          <div class="voice-live-row">
+            <button type="button" id="btnStartRec" class="btn-rec">Start recording</button>
+            <button type="button" id="btnStopRec" class="btn-rec btn-stop" disabled>
+              Stop &amp; transcribe
+            </button>
+          </div>
+          <p id="recStatus" class="rec-status"></p>
+        </div>
+        <p class="muted small sep-label">Or upload audio</p>
+        <form id="voiceForm">
+          <input id="voiceFile" type="file" accept="audio/*" />
+          <button type="submit">Convert file to text</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3) Image Input</h2>
+        <form id="imageForm">
+          <input id="imageFile" type="file" accept="image/*" />
+          <button type="submit">Extract Text from Image</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Recognized Text</h2>
+        <pre id="result">No output yet.</pre>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

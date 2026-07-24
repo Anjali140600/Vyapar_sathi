@@ -1,0 +1,21 @@
+{
+  "name": "vyapar-sathi",
+  "version": "1.0.0",
+  "description": "Vyapar Sathi — transaction capture API",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:init": "node scripts/init-db.js",
+    "db:migrate": "node scripts/migrate-quantity-types.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "mysql2": "^3.11.0"
+  }
+}

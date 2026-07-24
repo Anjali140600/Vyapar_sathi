@@ -1,0 +1,670 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 2023 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+(VYAPAR SATHI DATABASE AND INTERVIEW GUIDE) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Project database overview) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Which databases are used in the project?) Tj
+0 -15 Td
+(? MySQL is the main relational database.) Tj
+0 -15 Td
+(? ChromaDB is the vector database used for GST knowledge retrieval.) Tj
+0 -15 Td
+(? The filesystem also stores uploaded files in the `uploads/` folder, but that is not a) Tj
+0 -15 Td
+(database.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Where is MySQL configured?) Tj
+0 -15 Td
+(? `app/core/database.py` creates the SQLAlchemy engine and session.) Tj
+0 -15 Td
+(? `.env` contains `DATABASE_URL=mysql+pymysql://...`.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Where is ChromaDB used?) Tj
+0 -15 Td
+(? `app/services/rag_service.py` creates) Tj
+0 -15 Td
+(`chromadb.PersistentClient\(path="modules/module_1_rag/chroma_db"\)`.) Tj
+0 -15 Td
+(? PDF chunks are added to the `knowledge_base` collection.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(How the full project works step by step) Tj
+0 -15 Td
+(1. The React frontend calls FastAPI endpoints.) Tj
+0 -15 Td
+(2. Auth, transactions, chat, and uploads go to the backend.) Tj
+0 -15 Td
+(3. Structured records are stored in MySQL.) Tj
+0 -15 Td
+(4. GST PDFs are chunked, embedded, and stored in ChromaDB.) Tj
+0 -15 Td
+(5. Business questions use MySQL.) Tj
+0 -15 Td
+(6. GST knowledge questions use ChromaDB.) Tj
+0 -15 Td
+(7. The assistant combines retrieval logic with final answer formatting.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(2. What MySQL stores) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(? Users) Tj
+0 -15 Td
+(? User profiles) Tj
+0 -15 Td
+(? Conversations) Tj
+0 -15 Td
+(? Messages) Tj
+0 -15 Td
+(? Transactions) Tj
+0 -15 Td
+(? Uploaded file metadata) Tj
+0 -15 Td
+(? System logs) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Important tables) Tj
+0 -15 Td
+(? `users`) Tj
+0 -15 Td
+(? `user_profiles`) Tj
+0 -15 Td
+(? `conversations`) Tj
+0 -15 Td
+(? `messages`) Tj
+0 -15 Td
+(? `transactions`) Tj
+0 -15 Td
+(? `user_documents`) Tj
+0 -15 Td
+(? `system_logs`) Tj
+0 -15 Td
+() Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 2570 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+(Why MySQL is used) Tj
+0 -15 Td
+(? The app has structured business data.) Tj
+0 -15 Td
+(? The app needs relations between users, chats, and transactions.) Tj
+0 -15 Td
+(? The app needs totals, counts, GST sums, profit, and date filters.) Tj
+0 -15 Td
+(? MySQL is a strong fit for transactional and reporting workloads.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not only MySQL) Tj
+0 -15 Td
+(? MySQL is not naturally built for semantic similarity retrieval over long GST text.) Tj
+0 -15 Td
+(? It can store embeddings, but it is not the best tool to search them by meaning in this) Tj
+0 -15 Td
+(project.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(3. What ChromaDB stores) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(? GST document chunks) Tj
+0 -15 Td
+(? Embeddings for those chunks) Tj
+0 -15 Td
+(? Vector index data for similarity search) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why ChromaDB is used) Tj
+0 -15 Td
+(? It supports semantic retrieval.) Tj
+0 -15 Td
+(? It is easier to use than a low-level vector library for this project.) Tj
+0 -15 Td
+(? It provides persistent local storage.) Tj
+0 -15 Td
+(? It fits RAG workflows well.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not only ChromaDB) Tj
+0 -15 Td
+(? ChromaDB is not a replacement for users, transactions, chat history, and financial) Tj
+0 -15 Td
+(reporting.) Tj
+0 -15 Td
+(? It is good for vector search, not for general business CRUD and relational queries.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(4. Why not MongoDB?) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(? This project behaves like a finance and ledger system.) Tj
+0 -15 Td
+(? The main data is structured and relational.) Tj
+0 -15 Td
+(? The app needs exact schema, filtering, aggregation, and consistent reporting.) Tj
+0 -15 Td
+(? MySQL is a better fit than MongoDB for this workload.) Tj
+0 -15 Td
+(? For GST semantic retrieval, ChromaDB is more suitable than MongoDB.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(5. How to decide chunk size in ChromaDB) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(? Chunk size is chosen based on how much context each chunk should keep.) Tj
+0 -15 Td
+(? If chunks are too small, meaning gets broken.) Tj
+0 -15 Td
+(? If chunks are too large, retrieval becomes noisy and less precise.) Tj
+0 -15 Td
+(? For GST and policy PDFs, medium-size paragraph-level chunks are usually better.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Good rule for this project) Tj
+0 -15 Td
+(? `700-900` characters: more focused retrieval) Tj
+0 -15 Td
+(? `1000-1200` characters: better context preservation) Tj
+0 -15 Td
+(? Current code uses `chunk_size=1000`, which is a good default for GST documents.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(6. What is chunk overlap?) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 2446 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+() Tj
+0 -15 Td
+(? Chunk overlap means repeating some text from the end of one chunk at the start of the next) Tj
+0 -15 Td
+(chunk.) Tj
+0 -15 Td
+(? Example: if chunk size is `1000` and overlap is `150`, then the next chunk reuses the last) Tj
+0 -15 Td
+(`150` characters of the previous chunk.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why overlap is useful) Tj
+0 -15 Td
+(? It avoids losing meaning at chunk boundaries.) Tj
+0 -15 Td
+(? It helps when a rule or sentence continues across chunks.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why overlap should not be too large) Tj
+0 -15 Td
+(? Too much duplication) Tj
+0 -15 Td
+(? More storage) Tj
+0 -15 Td
+(? More repeated retrieval results) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(7. Why not FAISS or a normal database for embeddings?) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not FAISS in this project?) Tj
+0 -15 Td
+(? FAISS is mainly a vector search library.) Tj
+0 -15 Td
+(? ChromaDB is more application-ready for a local RAG setup.) Tj
+0 -15 Td
+(? With FAISS, you usually manage storage, IDs, metadata, and persistence more manually.) Tj
+0 -15 Td
+(? ChromaDB reduces glue code.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not a normal database for embeddings?) Tj
+0 -15 Td
+(? A normal relational database can store vectors as text or blobs.) Tj
+0 -15 Td
+(? But vector similarity search is not its main strength.) Tj
+0 -15 Td
+(? This project needs meaning-based retrieval, not just storage.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(8. How ChromaDB works internally) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. PDF text is loaded.) Tj
+0 -15 Td
+(2. Text is split into chunks.) Tj
+0 -15 Td
+(3. Each chunk is converted into an embedding vector.) Tj
+0 -15 Td
+(4. ChromaDB stores chunk text, IDs, and embeddings.) Tj
+0 -15 Td
+(5. ChromaDB maintains a vector index for fast similarity retrieval.) Tj
+0 -15 Td
+(6. At query time, the user query is also embedded.) Tj
+0 -15 Td
+(7. ChromaDB finds the nearest chunk vectors and returns the matching chunks.) Tj
+0 -15 Td
+(8. The app builds the final short answer from those chunks.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Important idea) Tj
+0 -15 Td
+(? ChromaDB does not directly generate the answer.) Tj
+0 -15 Td
+(? It retrieves the most relevant chunks.) Tj
+0 -15 Td
+(? Your application logic formats the final answer.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(9. How vector index building happens) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(1. Chunk text is prepared.) Tj
+0 -15 Td
+(2. An embedding model converts each chunk into a vector.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 2482 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+(3. The vectors are stored in the collection.) Tj
+0 -15 Td
+(4. ChromaDB organizes them into a search-friendly structure.) Tj
+0 -15 Td
+(5. This structure helps nearest-neighbor retrieval happen faster than comparing every vector) Tj
+0 -15 Td
+(one by one.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Simple meaning) Tj
+0 -15 Td
+(? Storing vectors is not the same as indexing vectors.) Tj
+0 -15 Td
+(? Storage saves them.) Tj
+0 -15 Td
+(? Indexing organizes them for fast similarity search.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(10. Important interview questions with brief answers) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q1. Which databases are used in your project?) Tj
+0 -15 Td
+(My project uses MySQL for structured business data and ChromaDB for GST document embeddings) Tj
+0 -15 Td
+(and semantic retrieval.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q2. Why did you use two databases instead of one?) Tj
+0 -15 Td
+(Because the project has two different workloads: structured business operations and) Tj
+0 -15 Td
+(unstructured semantic knowledge retrieval.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q3. Why did you choose MySQL?) Tj
+0 -15 Td
+(Because users, transactions, chat history, and reports are structured and relational, and) Tj
+0 -15 Td
+(MySQL handles aggregates and consistency well.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q4. Why did you choose ChromaDB?) Tj
+0 -15 Td
+(Because the GST assistant needs vector search over document chunks, and ChromaDB is a good) Tj
+0 -15 Td
+(local persistent RAG database.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q5. Why not MongoDB?) Tj
+0 -15 Td
+(Because the main application behaves more like a ledger and reporting system, which is a) Tj
+0 -15 Td
+(better fit for MySQL.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q6. Why not only MySQL?) Tj
+0 -15 Td
+(Because semantic retrieval over GST text is better handled by a vector database.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q7. Why not only ChromaDB?) Tj
+0 -15 Td
+(Because it is not designed to replace relational storage for users, transactions, and) Tj
+0 -15 Td
+(reports.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q8. Why not FAISS?) Tj
+0 -15 Td
+(FAISS is powerful but lower-level. ChromaDB is easier to integrate and persist for this) Tj
+0 -15 Td
+(project.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q9. What data is stored in MySQL?) Tj
+0 -15 Td
+(Users, profiles, chat sessions, messages, transactions, document metadata, and system logs.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q10. What data is stored in ChromaDB?) Tj
+0 -15 Td
+(GST knowledge chunks, embeddings, and vector index data.) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 2631 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+() Tj
+0 -15 Td
+(Q11. What is a vector database?) Tj
+0 -15 Td
+(A vector database stores embeddings and supports similarity search by meaning.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q12. What is an embedding?) Tj
+0 -15 Td
+(An embedding is a numeric vector representation of text meaning.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q13. What is chunking?) Tj
+0 -15 Td
+(Chunking is splitting a large document into smaller pieces before embedding and retrieval.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q14. What is chunk overlap?) Tj
+0 -15 Td
+(It is repeated text between neighboring chunks to preserve context.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q15. How do you decide chunk size?) Tj
+0 -15 Td
+(By balancing context preservation and retrieval precision. GST documents usually need) Tj
+0 -15 Td
+(medium-sized chunks.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q16. What happens when a user asks ?What is my total sales??) Tj
+0 -15 Td
+(The system routes the query to MySQL and calculates the result from the `transactions`) Tj
+0 -15 Td
+(table.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q17. What happens when a user asks a GST rule question?) Tj
+0 -15 Td
+(The system queries ChromaDB, retrieves relevant GST chunks, and then formats an answer.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q18. How does the assistant decide between MySQL and ChromaDB?) Tj
+0 -15 Td
+(It classifies the query based on whether it is a business-data question or a knowledge-base) Tj
+0 -15 Td
+(question.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q19. What is the role of SQLAlchemy in your project?) Tj
+0 -15 Td
+(SQLAlchemy connects the FastAPI backend to MySQL and maps Python models to database tables.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q20. What are primary keys and foreign keys in your schema?) Tj
+0 -15 Td
+(Primary keys uniquely identify records. Foreign keys connect related records like users to) Tj
+0 -15 Td
+(transactions or conversations to messages.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q21. Why is MySQL good for financial reports?) Tj
+0 -15 Td
+(Because it supports exact filters, sums, counts, date queries, and structured aggregation) Tj
+0 -15 Td
+(reliably.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q22. What is semantic search?) Tj
+0 -15 Td
+(Semantic search finds relevant text by meaning, not only by exact keyword match.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q23. What is the difference between exact search and semantic search?) Tj
+0 -15 Td
+(Exact search matches words. Semantic search matches meaning.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q24. Does ChromaDB store final answers?) Tj
+0 -15 Td
+(No. It stores chunks and embeddings. The application generates final answers.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Q25. Can one database be enough for this project?) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Length 2166 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+(Only if both workloads were similar. In this project, relational finance data and semantic) Tj
+0 -15 Td
+(GST retrieval need different storage strategies.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(11. Fast viva answers for your project) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Explain the database architecture of your project.) Tj
+0 -15 Td
+(My project uses MySQL as the main operational database and ChromaDB as the vector database.) Tj
+0 -15 Td
+(MySQL stores structured business records like users, chats, and transactions, while ChromaDB) Tj
+0 -15 Td
+(stores GST document embeddings for semantic retrieval.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why is MySQL used here?) Tj
+0 -15 Td
+(Because the project needs structured storage, relationships, and reporting queries such as) Tj
+0 -15 Td
+(total sales, expenses, GST, and profit.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why is ChromaDB used here?) Tj
+0 -15 Td
+(Because GST question-answering needs vector search over document chunks, which is different) Tj
+0 -15 Td
+(from normal relational queries.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not MongoDB?) Tj
+0 -15 Td
+(Because the project?s core data is structured and reporting-heavy, so MySQL is a better) Tj
+0 -15 Td
+(match.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(Why not one database only?) Tj
+0 -15 Td
+(Because business records and semantic document retrieval are two different technical) Tj
+0 -15 Td
+(problems.) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(12. Best points to remember before interview) Tj
+0 -15 Td
+() Tj
+0 -15 Td
+(? MySQL is the main database.) Tj
+0 -15 Td
+(? ChromaDB is the vector database.) Tj
+0 -15 Td
+(? MySQL handles structured business data.) Tj
+0 -15 Td
+(? ChromaDB handles GST semantic retrieval.) Tj
+0 -15 Td
+(? MongoDB was not chosen because the app is relational and report-heavy.) Tj
+0 -15 Td
+(? FAISS was not chosen because ChromaDB is easier to use as a persistent vector database in) Tj
+0 -15 Td
+(this project.) Tj
+0 -15 Td
+(? Chunk size controls context length.) Tj
+0 -15 Td
+(? Chunk overlap preserves context across chunk boundaries.) Tj
+0 -15 Td
+(? Embeddings represent meaning numerically.) Tj
+0 -15 Td
+(? Vector indexing speeds up nearest-neighbor retrieval.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Pages /Kids [9 0 R 10 0 R 11 0 R 12 0 R 13 0 R 14 0 R] /Count 6 >>
+endobj
+9 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+10 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+11 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+12 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+13 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 6 0 R >>
+endobj
+14 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+15 0 obj
+<< /Type /Catalog /Pages 8 0 R >>
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000002160 00000 n 
+0000004782 00000 n 
+0000007280 00000 n 
+0000009814 00000 n 
+0000012497 00000 n 
+0000014715 00000 n 
+0000014807 00000 n 
+0000014933 00000 n 
+0000015060 00000 n 
+0000015187 00000 n 
+0000015314 00000 n 
+0000015441 00000 n 
+0000015568 00000 n 
+trailer
+<< /Size 16 /Root 15 0 R >>
+startxref
+15618
+%%EOF
