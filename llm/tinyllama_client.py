@@ -10,9 +10,14 @@ load_dotenv()
 class TinyLlamaClient:
     def __init__(self):
         self.primary_model_name = os.getenv("PRIMARY_LLM_MODEL", "tinyllama")
+        self.agent_model_name = os.getenv("AGENT_LLM_MODEL", self.primary_model_name)
 
         self.llm = OllamaLLM(
             model=self.primary_model_name,
+            temperature=0.0
+        )
+        self.agent_llm = OllamaLLM(
+            model=self.agent_model_name,
             temperature=0.0
         )
 
@@ -85,6 +90,12 @@ class TinyLlamaClient:
         except Exception:
             return ""
 
+    def _invoke_agent(self, prompt: str) -> str:
+        try:
+            return self._clean_output(self.agent_llm.invoke(prompt))
+        except Exception:
+            return ""
+
     def generate(self, prompt: str, max_lines: int = 3, max_words: int = 60) -> str:
         """
         Used by RAG module.
@@ -123,3 +134,44 @@ User Question:
 """
         clean = self._invoke(prompt)
         return self._enforce_limits(clean, max_lines=max_lines, max_words=max_words)
+
+    def decide_agent_action(
+        self,
+        *,
+        user_query: str,
+        conversation_history: list[dict[str, str]],
+        tool_definitions: list[dict[str, object]],
+        observations: list[object],
+    ):
+        from app.agents.prompts import build_decision_prompt, build_repair_prompt
+        from app.agents.vyapar_sathi_agent import VyaparSathiAgent
+
+        prompt = build_decision_prompt(
+            user_query=user_query,
+            conversation_history=conversation_history,
+            tool_definitions=tool_definitions,
+            observations=observations,
+        )
+        raw = self._invoke_agent(prompt)
+        try:
+            return VyaparSathiAgent.parse_action_json(raw)
+        except Exception:
+            repaired = self._invoke_agent(build_repair_prompt(raw))
+            return VyaparSathiAgent.parse_action_json(repaired)
+
+    def synthesize_agent_answer(
+        self,
+        *,
+        user_query: str,
+        observations: list[object],
+        conversation_history: list[dict[str, str]],
+    ) -> str:
+        from app.agents.prompts import build_synthesis_prompt
+
+        prompt = build_synthesis_prompt(
+            user_query=user_query,
+            observations=observations,
+            conversation_history=conversation_history,
+        )
+        clean = self._invoke_agent(prompt)
+        return self._enforce_limits(clean, max_lines=3, max_words=80)

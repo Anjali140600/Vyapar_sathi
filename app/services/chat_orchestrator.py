@@ -1,8 +1,12 @@
-import re
+import os
 from sqlalchemy.orm import Session
 
+from app.agents.models import AgentContext, AgentResponse
+from app.agents.tool_registry import AgentToolRegistry
+from app.agents.vyapar_sathi_agent import VyaparSathiAgent
 from app.services.classifier_service import ClassifierService
 from app.services.data_service import DataService
+from app.services.financial_calculator_service import FinancialCalculatorService
 from app.services.ocr_service import OCRService
 from app.services.rag_service import RAGService
 from app.services.stt_service import STTService
@@ -14,6 +18,7 @@ _SHARED_STT = None
 _SHARED_DATA_SERVICE = None
 _SHARED_RAG_SERVICE = None
 _SHARED_LLM = None
+_SHARED_CALCULATOR = None
 
 
 def _get_shared_classifier():
@@ -58,6 +63,21 @@ def _get_shared_llm():
     return _SHARED_LLM
 
 
+def _get_shared_calculator():
+    global _SHARED_CALCULATOR
+    if _SHARED_CALCULATOR is None:
+        _SHARED_CALCULATOR = FinancialCalculatorService()
+    return _SHARED_CALCULATOR
+
+
+def _history_limit() -> int:
+    try:
+        value = int(os.getenv("AGENT_HISTORY_LIMIT", "8"))
+    except ValueError:
+        value = 8
+    return max(2, min(value, 10))
+
+
 class ChatOrchestrator:
     def __init__(self, db: Session):
         self.db = db
@@ -69,161 +89,85 @@ class ChatOrchestrator:
         self.data_service = _get_shared_data_service()
         self.rag_service = _get_shared_rag_service()
         self.llm = _get_shared_llm()
+        self.calculator = _get_shared_calculator()
+        self.tool_registry = AgentToolRegistry(
+            data_service=self.data_service,
+            rag_service=self.rag_service,
+            financial_calculator_service=self.calculator,
+            observation_max_chars=int(os.getenv("AGENT_OBSERVATION_MAX_CHARS", "3000") or "3000"),
+        )
+        self.agent = VyaparSathiAgent(
+            llm_client=self.llm,
+            tool_registry=self.tool_registry,
+            classifier_service=self.classifier,
+            calculator_service=self.calculator,
+        )
 
-    def process_input(self, text: str = None, image_path: str = None, audio_path: str = None, user_id: str = "default_user") -> str:
-        """
-        Coordinates the entire flow: Input -> Process -> Classify -> Fetch -> Answer.
-        """
+    def process_input_with_trace(
+        self,
+        text: str | None = None,
+        image_path: str | None = None,
+        audio_path: str | None = None,
+        user_id: str = "default_user",
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> AgentResponse:
         final_query = text or ""
-        extracted_data = None
+        bill_data = None
 
         if image_path:
             ocr_result = self.ocr.process_image(image_path)
-            final_query = ocr_result.get("raw_text", "")
-            extracted_data = ocr_result
+            bill_data = ocr_result
+            final_query = ocr_result.get("raw_text", "").strip()
+            if not final_query and any(ocr_result.get(key) for key in ("amount", "date", "gstin", "category")):
+                final_query = "Summarize the uploaded bill"
         elif audio_path:
-            final_query = self.stt.transcribe(audio_path)
+            try:
+                final_query = self.stt.transcribe(audio_path)
+            except Exception:
+                final_query = ""
 
         if not final_query.strip():
-            return "I couldn't understand the input. Please provide text, an image of a bill, or a voice message."
-
-        classification = self.classifier.classify(final_query)
-        q_type = classification["query_type"]
-        likely_db_query = q_type in {"sql", "mixed"} or self._contains_db_terms(final_query)
-        sql_answer = self.data_service.answer_sql_query(self.db, final_query, user_id) if likely_db_query else ""
-
-        category_summary = self._answer_category_amount_query(final_query, user_id)
-        if category_summary and self._prefer_sql_answer(final_query, q_type):
-            return self._format_response(category_summary, max_lines=1, max_words=28)
-
-        if sql_answer and self._prefer_sql_answer(final_query, q_type):
-            return self._generate_fallback("sql", sql_answer, "", extracted_data, final_query)
-
-        if q_type == "sql":
-            return self._generate_fallback("sql", sql_answer or "", "", extracted_data, final_query)
-
-        docs = self.rag_service.query(final_query)
-        rag_context = "\n".join(docs)
-
-        if q_type == "general":
-            if self._should_use_openai_general(final_query, docs):
-                return self.llm.generate_general_response(final_query, max_lines=3, max_words=55)
-            rag_answer = self._answer_rag_query(final_query, docs)
-            return self._format_response(rag_answer, max_lines=3, max_words=55)
-
-        if q_type == "mixed":
-            rag_answer = self._answer_rag_query(final_query, docs, prefer_single_line=True)
-            combined = self._combine_mixed_answer(sql_answer, rag_answer)
-            return self._generate_fallback("mixed", combined, rag_context, extracted_data, final_query)
-
-        return self._generate_fallback(q_type, "", rag_context, extracted_data, final_query)
-
-    def _answer_category_amount_query(self, query: str, user_id: str):
-        lower = (query or "").lower().strip()
-        if not lower:
-            return None
-
-        if re.search(r"\b(gst|tax|quantity|qty|units|pieces)\b", lower):
-            return None
-
-        if not re.search(r"\b(amount|total|how much|what is my)\b", lower):
-            return None
-
-        cleaned = re.sub(r"[^\w\s]", " ", lower)
-        cleaned = re.sub(r"\b(what|is|my|the|amount|total|how|much|for|of|show|tell|me)\b", " ", cleaned)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        if not cleaned:
-            return None
-
-        summary = self.data_service.summarize_category_amount(self.db, cleaned, user_id)
-        if not summary:
-            return None
-
-        amount = float(summary["amount"])
-        category = summary["category"]
-        count = summary["count"]
-        latest_date = summary["latest_date"] or "your latest entry"
-
-        if count == 1:
-            return f"Your {category} amount from MySQL is Rs. {amount:,.2f}, dated {latest_date}."
-        return f"Your total {category} amount from MySQL is Rs. {amount:,.2f} across {count} transactions."
-
-    @staticmethod
-    def _contains_gst_terms(query: str) -> bool:
-        lower = (query or "").lower()
-        return bool(re.search(r"\b(gst|cgst|sgst|igst|tax|hsn|sac|law|rules?|slab|percentage|rate)\b", lower))
-
-    @staticmethod
-    def _contains_db_terms(query: str) -> bool:
-        lower = (query or "").lower()
-        return bool(
-            re.search(
-                r"\b(transaction|transactions|entries|amount|total|sum|quantity|qty|units|pieces|sales|sale|income|expense|expenses|purchase|rent|salary|profit|loss|balance|recent|last|highest|lowest|average|avg|count|how many|item|items|material|materials|shop)\b",
-                lower,
+            return AgentResponse(
+                answer="I couldn't understand the input. Please provide text, an image of a bill, or a voice message."
             )
+
+        history = self._sanitize_history(conversation_history or [])
+        context = AgentContext(
+            db=self.db,
+            user_id=user_id,
+            conversation_history=history,
+            bill_data=bill_data,
         )
+        return self.agent.run(user_query=final_query, context=context)
 
-    def _prefer_sql_answer(self, query: str, q_type: str) -> bool:
-        if q_type == "sql":
-            return True
-        if self._contains_db_terms(query):
-            return True
-        return False
+    def process_input(
+        self,
+        text: str | None = None,
+        image_path: str | None = None,
+        audio_path: str | None = None,
+        user_id: str = "default_user",
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> str:
+        return self.process_input_with_trace(
+            text=text,
+            image_path=image_path,
+            audio_path=audio_path,
+            user_id=user_id,
+            conversation_history=conversation_history,
+        ).answer
 
-    def _should_use_openai_general(self, query: str, docs: list[str]) -> bool:
-        if self._contains_gst_terms(query):
-            return False
-        if self._contains_db_terms(query):
-            return False
-        if docs:
-            return False
-        return True
-
-    def _answer_rag_query(self, final_query: str, docs: list[str], prefer_single_line: bool = False) -> str:
-        if not docs:
-            return "I could not find a matching answer in the GST knowledge base."
-
-        max_lines = 1 if prefer_single_line else 3
-        return self.rag_service.build_concise_answer(final_query, docs, max_lines=max_lines)
-
-    def _combine_mixed_answer(self, sql_answer: str | None, rag_answer: str | None) -> str:
-        sql_part = self._single_line(sql_answer or "")
-        rag_part = self._single_line(rag_answer or "")
-        if sql_part and rag_part:
-            return f"{sql_part} GST: {rag_part}"
-        return sql_part or rag_part
-
-    @staticmethod
-    def _single_line(text: str) -> str:
-        return " ".join((text or "").replace("\n", " ").split())
-
-    def _format_response(self, text: str, max_lines: int = 1, max_words: int = 30) -> str:
-        source = self._single_line(text) if max_lines == 1 else text
-        return self.llm._enforce_limits(source, max_lines=max_lines, max_words=max_words)
-
-    def _generate_fallback(self, q_type, data, context, extracted_data=None, final_query: str = ""):
-        if extracted_data and extracted_data.get("amount"):
-            amount = extracted_data["amount"]
-            date = extracted_data.get("date", "recent")
-            return f"I processed your bill of Rs. {amount:,.2f} dated {date} and saved the details."
-
-        if q_type == "sql":
-            answer = data or "I could not find matching MySQL data for this query."
-            return self._format_response(answer, max_lines=1, max_words=28)
-
-        if q_type == "general":
-            docs = [doc for doc in context.split("\n") if doc.strip()]
-            if self._should_use_openai_general(final_query, docs):
-                return self.llm.generate_general_response(final_query, max_lines=3, max_words=55)
-            answer = self.rag_service.build_concise_answer(final_query, docs, max_lines=3)
-            return self._format_response(answer, max_lines=3, max_words=55)
-
-        if q_type == "mixed":
-            answer = data
-            if not answer:
-                docs = [doc for doc in context.split("\n") if doc.strip()]
-                rag_answer = self.rag_service.build_concise_answer(final_query, docs, max_lines=1) if docs else ""
-                answer = self._combine_mixed_answer("", rag_answer)
-            return self._format_response(answer or "I could not fully answer the mixed query.", max_lines=1, max_words=38)
-
-        return "I could not process this request."
+    def _sanitize_history(self, conversation_history: list[dict[str, str]]) -> list[dict[str, str]]:
+        limit = _history_limit()
+        cleaned: list[dict[str, str]] = []
+        total_chars = 0
+        for item in conversation_history[-limit:]:
+            role = (item.get("role") or "").strip().lower()
+            content = " ".join((item.get("content") or "").split()).strip()
+            if role not in {"user", "assistant"} or not content:
+                continue
+            content = content[:400]
+            total_chars += len(content)
+            if total_chars > 2400:
+                break
+            cleaned.append({"role": role, "content": content})
+        return cleaned

@@ -1,14 +1,51 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from app.core.database import get_db
-from app.core.security import get_current_user
-from app.services.chat_orchestrator import ChatOrchestrator
-from app.schemas.schemas import ChatRequest, ChatResponse
-from app.models.schema import Conversation, Message, User
+import json
+import os
 import uuid
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.security import get_current_user
+from app.models.schema import Conversation, Message, User
+from app.schemas.schemas import ChatRequest, ChatResponse
+from app.services.chat_orchestrator import ChatOrchestrator
+
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def _history_limit() -> int:
+    try:
+        value = int(os.getenv("AGENT_HISTORY_LIMIT", "8"))
+    except ValueError:
+        value = 8
+    return max(2, min(value, 10))
+
+
+def _safe_trace_metadata(trace: list[dict]) -> dict | None:
+    if not trace:
+        return None
+    metadata = {
+        "agent": {
+            "steps": [
+                {
+                    "step": item.get("step"),
+                    "tool": item.get("tool"),
+                    "status": item.get("status"),
+                    **({"duration_ms": item.get("duration_ms")} if item.get("duration_ms") is not None else {}),
+                    **({"summary": item.get("summary")} if item.get("summary") else {}),
+                }
+                for item in trace
+                if isinstance(item, dict)
+            ]
+        }
+    }
+    try:
+        json.dumps(metadata)
+    except (TypeError, ValueError):
+        return None
+    return metadata
 
 @router.post("", response_model=ChatResponse)
 def chat(
@@ -40,6 +77,15 @@ def chat(
             db.add(conversation)
             db.commit()
 
+    prior_messages = db.query(Message).filter(
+        Message.conversation_id == request.sessionId
+    ).order_by(Message.created_at.asc(), Message.id.asc()).all()
+    history = [
+        {"role": message.role, "content": message.content}
+        for message in prior_messages[-_history_limit():]
+        if message.role in {"user", "assistant"} and message.content
+    ]
+
     # 3. Log user message & Auto-Naming
     if request.message:
         # Auto-Rename if it's a new chat
@@ -57,14 +103,22 @@ def chat(
 
     # 4. Orchestrate Response
     orchestrator = ChatOrchestrator(db)
-    ai_response_text = orchestrator.process_input(text=request.message, user_id=current_user.id)
+    agent_response = orchestrator.process_input_with_trace(
+        text=request.message,
+        user_id=current_user.id,
+        conversation_history=history,
+    )
+    ai_response_text = agent_response.answer
 
     # 5. Log AI message
     ai_msg = Message(
         conversation_id=request.sessionId,
         role="assistant",
-        content=ai_response_text
+        content=ai_response_text,
     )
+    trace_metadata = _safe_trace_metadata(agent_response.trace)
+    if trace_metadata:
+        ai_msg.meta_data = trace_metadata
     db.add(ai_msg)
     db.commit()
 
