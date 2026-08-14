@@ -22,6 +22,14 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 
+# Add deployed frontend origins through a comma-separated environment variable.
+# Origins must include the scheme and must not include a trailing slash.
+ALLOWED_ORIGINS.extend(
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+)
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     print(f"DEBUG: 422 Validation Error at {request.url}")
