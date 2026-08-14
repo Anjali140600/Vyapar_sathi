@@ -32,13 +32,13 @@ Vyapar Sathi is a React plus FastAPI application built for Indian small business
 | Feature | What It Does | Main Files |
 | --- | --- | --- |
 | Authentication | Registers users, logs them in, returns JWT token | `app/api/auth_router.py`, `app/core/security.py` |
-| Dashboard | Shows business KPIs and quick actions | `src/pages/dashboard-page.jsx` |
-| Transactions | CRUD for income and expense records | `src/pages/transactions-page.jsx`, `app/api/transaction_router.py` |
-| Assistant | Chat with business data and GST knowledge | `src/pages/assistant-page.jsx`, `app/api/chat_router.py` |
+| Dashboard | Shows business KPIs and quick actions | `frontend/src/pages/dashboard-page.jsx` |
+| Transactions | CRUD for income and expense records | `frontend/src/pages/transactions-page.jsx`, `app/api/transaction_router.py` |
+| Assistant | Chat with business data and GST knowledge | `frontend/src/pages/assistant-page.jsx`, `app/api/chat_router.py` |
 | OCR | Reads bills and extracts structured values | `app/services/ocr_service.py`, `app/api/multimodal_router.py` |
 | STT | Converts uploaded or live-recorded audio to text | `app/services/stt_service.py`, `app/api/multimodal_router.py` |
 | RAG | Retrieves GST knowledge from document chunks | `app/services/rag_service.py` |
-| Reports | Builds charts and insight views from transaction data | `src/pages/reports-page.jsx` |
+| Reports | Builds charts and insight views from transaction data | `frontend/src/pages/reports-page.jsx` |
 
 ## 4. Tech Stack Overview
 
@@ -87,7 +87,7 @@ Vyapar Sathi is a React plus FastAPI application built for Indian small business
 
 The active full-stack application uses:
 
-- `src/` for the React frontend
+- `frontend/` for the React frontend
 - `app/` for the FastAPI backend
 - `docs/` for interview and revision material
 - `uploads/` for uploaded files
@@ -95,7 +95,7 @@ The active full-stack application uses:
 There are older prototype folders such as `step-1`, `step2-multimodal (1)`, and `step3-query-classifier`, but the main live system is the integrated React plus FastAPI app.
 
 > [Revision Box] Important Clarification
-> If someone asks which code is the main project, answer: the current integrated project is in `src/` and `app/`. The `step-*` folders are previous development stages and experiments.
+> If someone asks which code is the main project, answer: the current integrated project is in `frontend/` and `app/`. The `step-*` folders are previous development stages and experiments.
 
 ## 6. Frontend Architecture
 
@@ -103,7 +103,7 @@ The frontend is a single-page React application.
 
 ### App startup
 
-The root file `src/main.jsx` wraps the app with:
+The frontend entry file `frontend/src/main.jsx` wraps the app with:
 
 - `ThemeProvider`
 - `QueryClientProvider`
@@ -121,7 +121,7 @@ This means the app has:
 
 ### Routing
 
-Main routes defined in `src/App.jsx`:
+Main routes defined in `frontend/src/App.jsx`:
 
 - `/` -> auth page
 - `/dashboard`
@@ -256,8 +256,8 @@ I used SQLAlchemy models for database structure and Pydantic schemas for request
 
 - `app/api/auth_router.py`
 - `app/core/security.py`
-- `src/providers/auth-provider.jsx`
-- `src/lib/api.js`
+- `frontend/src/providers/auth-provider.jsx`
+- `frontend/src/lib/api.js`
 
 > [Revision Box] Authentication Insight
 > Signup stores the user in MySQL, but login succeeds only if the same email and password are sent again. A `401 Unauthorized` after a successful register call usually means credential mismatch or a backend environment mismatch, not that account creation failed.
@@ -588,7 +588,7 @@ This is a safer design for business data because it reduces hallucination risk.
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-npm install
+npm --prefix frontend install
 ```
 
 ### Database setup
@@ -609,13 +609,13 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 Frontend terminal:
 
 ```text
-npm run dev
+npm --prefix frontend run dev
 ```
 
 ### Production-like local run
 
 ```text
-npm run build
+npm --prefix frontend run build
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -737,10 +737,10 @@ The browser records audio with MediaRecorder, stores chunks in memory, sends the
 | `app/services/ocr_service.py` | Bill OCR |
 | `app/services/stt_service.py` | Whisper transcription |
 | `app/services/chat_orchestrator.py` | Central AI orchestration |
-| `src/App.jsx` | Frontend route map |
-| `src/lib/api.js` | Frontend API layer |
-| `src/providers/auth-provider.jsx` | Frontend auth state |
-| `src/pages/assistant-page.jsx` | Assistant UI and live recording flow |
+| `frontend/src/App.jsx` | Frontend route map |
+| `frontend/src/lib/api.js` | Frontend API layer |
+| `frontend/src/providers/auth-provider.jsx` | Frontend auth state |
+| `frontend/src/pages/assistant-page.jsx` | Assistant UI and live recording flow |
 
 ## 33. Cheat Sheet: Important Endpoints
 

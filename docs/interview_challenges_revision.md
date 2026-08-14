@@ -220,7 +220,7 @@ Why it mattered:
 In a company, code is maintained by teams, not by memory. If the structure is not clean, onboarding and future development become slow.
 
 Exact solution:
-I organized the backend into clear layers: `api`, `core`, `models`, `schemas`, and `services`. I kept validation separate from database structure and separated orchestration logic from route handlers. I also preserved earlier prototype stages as learning steps while keeping the final integrated app focused in `src/` and `app/`.
+I organized the backend into clear layers: `api`, `core`, `models`, `schemas`, and `services`. I kept validation separate from database structure and separated orchestration logic from route handlers. I also preserved earlier prototype stages as learning steps while keeping the final integrated app focused in `frontend/src/` and `app/`.
 
 Result:
 The codebase became easier to debug, explain, and extend.

@@ -13,7 +13,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vyapar Sathi Unified API", version="1.0.0")
 BASE_DIR = Path(__file__).resolve().parent.parent
-PUBLIC_DIR = BASE_DIR / "public"
+PUBLIC_DIR = BASE_DIR / "frontend" / "public"
 
 ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
