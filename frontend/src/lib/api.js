@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
 const api = axios.create({
-  baseURL: window.location.origin,
+  baseURL: configuredApiUrl
+    ? configuredApiUrl.replace(/\/$/, "")
+    : window.location.origin,
 });
 
 api.interceptors.request.use((config) => {
@@ -14,6 +18,7 @@ api.interceptors.request.use((config) => {
 
 export const authApi = {
   register: (payload) => api.post("/api/auth/register", payload),
+  google: (credential) => api.post("/api/auth/google", { credential }),
   login: (payload) =>
     api.post("/api/auth/login", new URLSearchParams(payload), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import date as DateType, datetime
 
@@ -21,6 +21,13 @@ class Token(BaseModel):
     accessToken: str
     tokenType: str = "bearer"
     success: bool = True
+
+class GoogleCredential(BaseModel):
+    credential: str = Field(min_length=1)
+
+class GoogleAuthResponse(Token):
+    email: EmailStr
+    isNewUser: bool = False
 
 class ChatRequest(BaseModel):
     sessionId: Optional[str] = None

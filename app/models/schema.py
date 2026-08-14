@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, DECIMAL, BIGINT, JSON, Date, BigInteger
+from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, DECIMAL, BIGINT, JSON, Date, BigInteger, UniqueConstraint
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -14,6 +14,19 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class UserIdentity(Base):
+    __tablename__ = "user_identities"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_subject", name="uq_user_identity_provider_subject"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String(30), nullable=False)
+    provider_subject = Column(String(255), nullable=False)
+    email = Column(String(150), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
