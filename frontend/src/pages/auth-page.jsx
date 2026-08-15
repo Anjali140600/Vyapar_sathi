@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -59,15 +58,6 @@ export function AuthPage() {
     onError: (error) => toast.error(error.response?.data?.detail || "Could not create your account."),
   });
 
-  const googleMutation = useMutation({
-    mutationFn: (credential) => authApi.google(credential),
-    onSuccess: (response) => {
-      login(response.data.accessToken, response.data.email);
-      toast.success(response.data.isNewUser ? "Google account created." : "Welcome back to Vyapar Sathi.");
-      navigate("/dashboard");
-    },
-    onError: (error) => toast.error(error.response?.data?.detail || "Google authentication failed."),
-  });
 
   return (
     <div className="min-h-screen bg-slateDeep px-4 py-6 text-white md:px-10">
@@ -134,7 +124,7 @@ export function AuthPage() {
           <div className="mx-auto max-w-md">
             <p className="text-sm uppercase tracking-[0.28em] text-assistant">Start your workspace</p>
             <h2 className="mt-3 font-display text-3xl font-bold">Welcome back</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Use your email or Google account to sign in or create a new business account.</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Use your email to sign in or create a new business account.</p>
 
             <div className="mt-8 grid grid-cols-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
               {["login", "signup"].map((tab) => (
@@ -181,17 +171,6 @@ export function AuthPage() {
                 </form>
               )}
 
-              <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-slate-400">
-                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                Or continue with
-                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-              </div>
-
-              <GoogleAuthButton
-                disabled={googleMutation.isPending}
-                onCredential={(credential) => googleMutation.mutate(credential)}
-                onError={(message) => toast.error(message)}
-              />
             </Card>
           </div>
         </section>
