@@ -9,6 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  config.headers["ngrok-skip-browser-warning"] = "true";
   const token = localStorage.getItem("vyaparSathiAuthToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -18,7 +19,6 @@ api.interceptors.request.use((config) => {
 
 export const authApi = {
   register: (payload) => api.post("/api/auth/register", payload),
-  google: (credential) => api.post("/api/auth/google", { credential }),
   login: (payload) =>
     api.post("/api/auth/login", new URLSearchParams(payload), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
