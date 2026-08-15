@@ -37,9 +37,9 @@ export function UploadPage() {
       const extracted = data.extracted_data || {};
       setFields({
         date: normalizeDate(extracted.date),
-        amount: extracted.amount || "",
-        gst_amount: "",
-        vendor: "",
+        amount: extracted.amount ?? "",
+        gst_amount: extracted.gst_amount ?? "",
+        vendor: extracted.vendor ?? "",
         category: extracted.category || "General",
         type: extracted.type === "expense" ? "purchase" : "sales",
       });

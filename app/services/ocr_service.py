@@ -14,8 +14,10 @@ except Exception as exc:
     OCR_IMPORT_ERROR = exc
 
 # Configure Tesseract path for Windows if not in PATH.
-# Uncomment if tesseract.exe is not on PATH:
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+if pytesseract and os.name == "nt":
+    _tess_cmd = os.getenv("TESSERACT_CMD", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+    if os.path.exists(_tess_cmd):
+        pytesseract.pytesseract.tesseract_cmd = _tess_cmd
 
 # Read language config from .env  (e.g. TESSERACT_LANGS=eng+hin)
 TESSERACT_LANGS = os.getenv("TESSERACT_LANGS", "eng+hin")

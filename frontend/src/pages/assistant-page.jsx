@@ -150,6 +150,9 @@ export function AssistantPage() {
   const sessionsQuery = useQuery({
     queryKey: ["chat-sessions"],
     queryFn: () => chatApi.sessions().then((res) => res.data.data || []),
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,   // poll every 5 s so sidebar always stays fresh
+    staleTime: 0,
   });
 
   const historyQuery = useQuery({
