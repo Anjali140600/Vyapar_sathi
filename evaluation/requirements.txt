@@ -1,0 +1,10 @@
+# Self-contained dependencies for the offline GST RAG evaluator.
+# Production installations can continue to use the root requirements file only.
+python-dotenv==1.0.1
+chromadb==1.5.9
+langchain-community==0.2.4
+langchain-text-splitters==0.2.1
+pypdf==4.2.0
+ragas>=0.4.1,<0.5
+openai>=1.68,<3
+pandas>=2.2,<3

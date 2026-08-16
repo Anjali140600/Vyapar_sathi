@@ -1,0 +1,311 @@
+{
+  "metadata": {
+    "created_at": "2026-08-10T17:12:02.879729+00:00",
+    "dataset": "evaluation\\datasets\\gst_rag_eval.jsonl",
+    "dataset_sha256": "1e4f28643c63d8f39a36923e002a349687f89176ca3a771d177f187f33c8886a",
+    "db_folder": "modules\\module_1_rag\\chroma_db",
+    "n_results": 3,
+    "provider": "google",
+    "evaluator_model": "gemini-3.5-flash-lite",
+    "embedding_model": "gemini-embedding-001",
+    "max_concurrency": 1,
+    "thresholds": {
+      "context_precision": 0.65,
+      "context_recall": 0.7,
+      "faithfulness": 0.7,
+      "answer_relevancy": 0.7,
+      "factual_correctness": 0.7
+    },
+    "python": "3.11.0",
+    "packages": {
+      "ragas": "0.4.3",
+      "openai": "1.109.1",
+      "chromadb": "1.5.9"
+    },
+    "mode": "ragas"
+  },
+  "summary": {
+    "sample_count": 8,
+    "aggregates": {
+      "answer_relevancy": 0.8544409663508876,
+      "context_precision": 0.7200000111,
+      "context_recall": 0.6456333999999,
+      "factual_correctness": 0.6675,
+      "faithfulness": 0.611111199
+    },
+    "coverage": {
+      "answer_relevancy": {
+        "scored": 8,
+        "total": 8
+      },
+      "context_precision": {
+        "scored": 8,
+        "total": 8
+      },
+      "context_recall": {
+        "scored": 8,
+        "total": 8
+      },
+      "factual_correctness": {
+        "scored": 8,
+        "total": 8
+      },
+      "faithfulness": {
+        "scored": 8,
+        "total": 8
+      }
+    },
+    "gates": {
+      "context_precision": {
+        "score": 0.9999999999208333,
+        "threshold": 0.65,
+        "passed": true
+      },
+      "context_recall": {
+        "score": 1.0,
+        "threshold": 0.7,
+        "passed": true
+      },
+      "faithfulness": {
+        "score": 1.0,
+        "threshold": 0.7,
+        "passed": true
+      },
+      "answer_relevancy": {
+        "score": 0.8544409663508876,
+        "threshold": 0.7,
+        "passed": true
+      },
+      "factual_correctness": {
+        "score": 0.6675,
+        "threshold": 0.7,
+        "passed": false
+      }
+    },
+    "passed": false,
+    "metric_error_count": 0
+  },
+  "records": [
+    {
+      "case_id": "gst_definition",
+      "user_input": "What is GST?",
+      "reference": "GST is a destination-based indirect tax levied on the supply of goods and services.",
+      "category": "concept",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "GST is a destination-based indirect tax levied on the supply of goods and services.",
+      "retrieved_contexts": [
+        "Q: What is GST?\nA: GST is a destination-based indirect tax levied on the supply of goods and services.\nSource: CBIC - Know About GST\nEffective from: 2017-07-01",
+        "A: GST is a unified indirect tax applied on supply of goods and services in India.\nQ: What are GST rate categories?\nA: GST rates are 0%, 5%, 12%, 18%, and 28%.\nQ: What is the most common GST rate?\nA: The most common GST rate is 18%.\nQ: Is GST applicable on all services?\nA: No, some services are exempt or taxed at lower rates."
+      ],
+      "latency_ms": 509.59,
+      "scores": {
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999999999999997,
+        "factual_correctness": 1.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "gst_rate_slabs",
+      "user_input": "What are the main GST rate slabs in India now?",
+      "reference": "From 22 September 2025, the rationalised structure has a 5% merit rate and an 18% standard rate, plus a special 40% de-merit rate for select goods and services.",
+      "category": "rates",
+      "source": "GST Council 56th meeting recommendations and implementation FAQ (September 2025)",
+      "response": "From 22 September 2025, the rationalised GST structure has a 5% merit rate and an 18% standard rate, with a special 40% de-merit rate for select goods and services.",
+      "retrieved_contexts": [
+        "Q: What are the main GST rate slabs in India now?\nA: From 22 September 2025, the rationalised GST structure has a 5% merit rate and an 18% standard rate, with a special 40% de-merit rate for select goods and services.\nSource: GST Council - Recommendations of the 56th Meeting\nEffective from: 2025-09-22",
+        "Q: What is the GST rate on mobile phones?\nA: Mobile phones classified under heading 8517 generally attract 18% GST.\nSource: CBIC - GST Goods and Services Rates"
+      ],
+      "latency_ms": 335.88,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.68838287493945,
+        "factual_correctness": 1.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "cgst_sgst_difference",
+      "user_input": "What is the difference between CGST and SGST?",
+      "reference": "For an intra-state supply, CGST is collected by the Central Government and SGST is collected by the State Government.",
+      "category": "concept",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "For an intra-State supply, CGST is collected by the Central Government and SGST is collected by the State Government.",
+      "retrieved_contexts": [
+        "Q: What is the difference between CGST and SGST?\nA: For an intra-State supply, CGST is collected by the Central Government and SGST is collected by the State Government.\nSource: CBIC - Know About GST\nEffective from: 2017-07-01"
+      ],
+      "latency_ms": 319.45,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.771519770298417,
+        "factual_correctness": 1.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "igst_usage",
+      "user_input": "When is IGST charged?",
+      "reference": "IGST is charged on inter-state supplies of goods or services and is collected by the Central Government.",
+      "category": "concept",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "IGST is levied and collected by the Central Government on inter-State supplies of goods or services.",
+      "retrieved_contexts": [
+        "Q: When is IGST charged?\nA: IGST is levied and collected by the Central Government on inter-State supplies of goods or services.\nSource: CBIC - GST FAQ, Overview of the IGST Act\nEffective from: 2017-07-01"
+      ],
+      "latency_ms": 347.91,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7757125081939393,
+        "factual_correctness": 1.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "healthcare_exemption",
+      "user_input": "Are healthcare services exempt from GST?",
+      "reference": "Healthcare services provided by a clinical establishment, an authorised medical practitioner, or paramedics are generally exempt from GST, subject to specified exceptions.",
+      "category": "exemption",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "Healthcare services provided by a clinical establishment, an authorised medical practitioner or paramedics are exempt from GST, subject to the scope of the exemption notification.",
+      "retrieved_contexts": [
+        "Q: Are healthcare services exempt from GST?\nA: Healthcare services provided by a clinical establishment, an authorised medical practitioner or paramedics are exempt from GST, subject to the scope of the exemption notification.\nSource: CBIC Circular No. 32/06/2018-GST\nEffective from: 2017-07-01",
+        "GST SERVICES KNOWLEDGE BASE (RAG READY)\nNIL GST SERVICES\nTransport of milk, food grains, and agricultural produce is exempt from GST.\nHealthcare services provided by hospitals and doctors are exempt from GST.\nEducational services up to higher secondary level are exempt from GST.\nRenting of residential property for residence is exempt from GST.\nQ: Is GST applicable on milk transport?\nA: No, transport of milk is exempt from GST.\nQ: Is healthcare taxed under GST?\nA: No, healthcare services are exempt from GST.\n5% GST SERVICES\nTransport of passengers by AC buses and economy class flights is taxed at 5%.\nGoods transport agency services are taxed at 5%.\nQ: What is GST on economy class flight?\nA: GST is 5% on economy class air travel.\n12% GST SERVICES\nRestaurants without AC and without liquor license are taxed at 12%.\nHotels with tariff between 1000 and 2500 per day are taxed at 12%.\nQ: What is GST on non-AC restaurants?\nA: GST is 12% on non-AC restaurants.\n18% GST SERVICES"
+      ],
+      "latency_ms": 340.35,
+      "scores": {
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9655783064567407,
+        "factual_correctness": 0.67
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "education_exemption",
+      "user_input": "Are educational services exempt from GST?",
+      "reference": "Specified services provided by and to eligible educational institutions are exempt from GST; the exemption is not universal for every education-related service.",
+      "category": "exemption",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "Services supplied by a qualifying educational institution to its students, faculty and staff are exempt from GST under the applicable exemption notification.",
+      "retrieved_contexts": [
+        "Q: Are educational services exempt from GST?\nA: Services supplied by a qualifying educational institution to its students, faculty and staff are exempt from GST under the applicable exemption notification.\nSource: CBIC Circular No. 177/09/2022-TRU\nEffective from: 2017-07-01",
+        "(iv) services relating to admission to, or conduct of examination by, such institution; upto higher \nsecondary: \n Provided that nothing contained in entry (b) shall apply to an educational institution other than an \ninstitution providing services by way of pre-school education and education up to higher secondary \nschool or equivalent.\nNil\n70 Services provided by the Indian Institutes of Management, as per the guidelines of the Central Gov-",
+        "GST SERVICES KNOWLEDGE BASE (RAG READY)\nNIL GST SERVICES\nTransport of milk, food grains, and agricultural produce is exempt from GST.\nHealthcare services provided by hospitals and doctors are exempt from GST.\nEducational services up to higher secondary level are exempt from GST.\nRenting of residential property for residence is exempt from GST.\nQ: Is GST applicable on milk transport?\nA: No, transport of milk is exempt from GST.\nQ: Is healthcare taxed under GST?\nA: No, healthcare services are exempt from GST.\n5% GST SERVICES\nTransport of passengers by AC buses and economy class flights is taxed at 5%.\nGoods transport agency services are taxed at 5%.\nQ: What is GST on economy class flight?\nA: GST is 5% on economy class air travel.\n12% GST SERVICES\nRestaurants without AC and without liquor license are taxed at 12%.\nHotels with tariff between 1000 and 2500 per day are taxed at 12%.\nQ: What is GST on non-AC restaurants?\nA: GST is 12% on non-AC restaurants.\n18% GST SERVICES"
+      ],
+      "latency_ms": 304.4,
+      "scores": {
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9153860626965301,
+        "factual_correctness": 0.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "mobile_phone_rate",
+      "user_input": "What is the GST rate on mobile phones?",
+      "reference": "Mobile phones are generally taxed at 18% GST.",
+      "category": "rates",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "Mobile phones classified under heading 8517 generally attract 18% GST.",
+      "retrieved_contexts": [
+        "Q: What is the GST rate on mobile phones?\nA: Mobile phones classified under heading 8517 generally attract 18% GST.\nSource: CBIC - GST Goods and Services Rates"
+      ],
+      "latency_ms": 334.72,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.890456479620144,
+        "factual_correctness": 0.0
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    },
+    {
+      "case_id": "restaurant_rate",
+      "user_input": "What GST applies to restaurant services?",
+      "reference": "Restaurant services generally attract 5% GST without input tax credit, subject to exceptions for specified premises and services.",
+      "category": "rates",
+      "source": "gst_services_rag_enhanced.pdf",
+      "response": "Restaurant service other than at specified premises generally attracts 5% GST without input tax credit; restaurant service at specified premises generally attracts 18% GST with input tax credit.",
+      "retrieved_contexts": [
+        "Q: What GST applies to restaurant services?\nA: Restaurant service other than at specified premises generally attracts 5% GST without input tax credit; restaurant service at specified premises generally attracts 18% GST with input tax credit.\nSource: CBIC - GST Goods and Services Rates"
+      ],
+      "latency_ms": 332.83,
+      "scores": {
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8284917286018806,
+        "factual_correctness": 0.67
+      },
+      "reasons": {
+        "context_precision": null,
+        "context_recall": null,
+        "faithfulness": null,
+        "answer_relevancy": null,
+        "factual_correctness": null
+      },
+      "errors": {}
+    }
+  ]
+}
