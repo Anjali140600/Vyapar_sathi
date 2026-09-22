@@ -10,17 +10,51 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { transactionApi } from "@/lib/api";
 
-const schema = z.object({
-  transaction_date: z.string().min(1, "Date is required"),
-  money_direction: z.enum(["received", "spent"]),
-  type: z.string().min(1, "Category type is required"),
-  amount: z.coerce.number().positive("Amount is required"),
-  gst_amount: z.union([z.coerce.number(), z.nan()]).optional(),
-  quantity: z.union([z.coerce.number(), z.nan()]).optional(),
-  category: z.string().min(2, "Category is required"),
-  description: z.string().optional(),
-  payment_method: z.string().optional(),
-});
+const schema = z
+  .object({
+    transaction_date: z.string().min(1, "Date is required"),
+    money_direction: z.enum(["received", "spent"]),
+    type: z.string().min(1, "Category type is required"),
+    amount: z.coerce.number().positive("Amount is required"),
+    gst_amount: z.union([z.coerce.number(), z.nan()]).optional(),
+    quantity: z.union([z.coerce.number(), z.nan()]).optional(),
+    category: z.string().min(2, "Category is required"),
+    description: z.string().optional(),
+    payment_method: z.string().optional(),
+    has_due: z.boolean().default(false),
+    amount_paid: z.union([z.coerce.number().min(0), z.nan()]).optional(),
+    due_date: z.string().optional(),
+    is_recurring: z.boolean().default(false),
+    frequency: z.enum(["weekly", "monthly", "yearly"]).optional(),
+    next_run_date: z.string().optional(),
+  })
+  .superRefine((values, context) => {
+    if (values.is_recurring && !values.frequency) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["frequency"],
+        message: "Frequency is required",
+      });
+    }
+    if (values.has_due && Number(values.amount_paid || 0) > Number(values.amount)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["amount_paid"],
+        message: "Paid amount cannot exceed the total",
+      });
+    }
+    if (
+      values.has_due &&
+      Number(values.amount_paid || 0) < Number(values.amount) &&
+      !values.due_date
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["due_date"],
+        message: "Due date is required",
+      });
+    }
+  });
 
 export function TransactionForm({ types = [], defaultValues, onSuccess, compact = false }) {
   const queryClient = useQueryClient();
@@ -36,10 +70,18 @@ export function TransactionForm({ types = [], defaultValues, onSuccess, compact 
       category: "",
       description: "",
       payment_method: "cash",
+      has_due: false,
+      amount_paid: "",
+      due_date: "",
+      is_recurring: false,
+      frequency: "monthly",
+      next_run_date: "",
     },
   });
 
   const direction = form.watch("money_direction");
+  const hasDue = form.watch("has_due");
+  const isRecurring = form.watch("is_recurring");
 
   useEffect(() => {
     if (defaultValues) {
@@ -66,6 +108,12 @@ export function TransactionForm({ types = [], defaultValues, onSuccess, compact 
         quantity: "",
         category: "",
         description: "",
+        has_due: false,
+        amount_paid: "",
+        due_date: "",
+        is_recurring: false,
+        frequency: "monthly",
+        next_run_date: "",
       });
       onSuccess?.();
     },
@@ -139,6 +187,60 @@ export function TransactionForm({ types = [], defaultValues, onSuccess, compact 
         </Field>
       </div>
 
+      <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+        <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            {...form.register("has_due")}
+          />
+          Payment pending / Udhaar
+        </label>
+        {hasDue ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="Amount already paid" error={form.formState.errors.amount_paid?.message}>
+              <Input type="number" min="0" step="0.01" placeholder="0.00" {...form.register("amount_paid")} />
+            </Field>
+            <Field label="Due date" error={form.formState.errors.due_date?.message}>
+              <Input type="date" {...form.register("due_date")} />
+            </Field>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+        <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            {...form.register("is_recurring")}
+          />
+          Repeat this transaction automatically
+        </label>
+        {isRecurring ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="Frequency" error={form.formState.errors.frequency?.message}>
+              <select
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white/70 px-3 text-sm dark:border-slate-700 dark:bg-slate-950/50"
+                {...form.register("frequency")}
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </Field>
+            <Field label="First repeat date (optional)">
+              <Input type="date" {...form.register("next_run_date")} />
+            </Field>
+          </div>
+        ) : null}
+        {isRecurring ? (
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            If the first repeat date is blank, it is calculated from the transaction date.
+          </p>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" variant={direction === "received" ? "success" : "default"}>
           {mutation.isPending ? "Saving..." : "Save Transaction"}
@@ -150,14 +252,24 @@ export function TransactionForm({ types = [], defaultValues, onSuccess, compact 
 }
 
 export function toPayload(values) {
+  const amount = Number(values.amount);
+  const amountPaid = Number(values.amount_paid);
+  const quantity = Number(values.quantity);
+  const gstAmount = Number(values.gst_amount);
+
   return {
-    amount: values.amount,
+    amount,
     category: values.category,
     type: values.type,
-    quantity: Number.isFinite(values.quantity) ? values.quantity : null,
-    gst_amount: Number.isFinite(values.gst_amount) ? values.gst_amount : null,
+    quantity: Number.isFinite(quantity) && values.quantity !== "" ? quantity : null,
+    gst_amount: Number.isFinite(gstAmount) && values.gst_amount !== "" ? gstAmount : null,
     description: values.description || null,
     date: values.transaction_date || null,
+    amount_paid: values.has_due && Number.isFinite(amountPaid) ? amountPaid : amount,
+    due_date: values.has_due && values.due_date ? values.due_date : null,
+    is_recurring: Boolean(values.is_recurring),
+    frequency: values.is_recurring ? values.frequency : null,
+    next_run_date: values.is_recurring && values.next_run_date ? values.next_run_date : null,
   };
 }
 

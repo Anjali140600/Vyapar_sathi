@@ -1,26 +1,32 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, CircleDollarSign, FileUp, HandCoins, IndianRupee, Plus, ReceiptIndianRupee, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, CircleDollarSign, FileUp, HandCoins, IndianRupee, Plus, ReceiptIndianRupee, Trash2, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricCard } from "@/components/shared/metric-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { TransactionForm } from "@/components/shared/transaction-form";
-import { transactionApi } from "@/lib/api";
+import { budgetApi, transactionApi } from "@/lib/api";
 import { formatCurrency, formatDate, getGreeting } from "@/lib/format";
 import { buildChartData, buildInsightMessages, buildPeriodStats } from "@/lib/insights";
 import { useAuth } from "@/providers/auth-provider";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 export function DashboardPage() {
-  const { email } = useAuth();
+  const queryClient = useQueryClient();
+  const { email, role } = useAuth();
+  const canManageBudgets = role === "owner" || role === "accountant";
   const [chartMode, setChartMode] = useState("monthly");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [budgetForm, setBudgetForm] = useState({ category: "", amount: "", warning_threshold: "80" });
 
   const transactionsQuery = useQuery({
     queryKey: ["transactions"],
@@ -33,6 +39,32 @@ export function DashboardPage() {
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: () => transactionApi.summary().then((res) => res.data),
+  });
+  const budgetsQuery = useQuery({
+    queryKey: ["budgets"],
+    queryFn: () => budgetApi.list().then((res) => res.data.data || []),
+    enabled: canManageBudgets,
+  });
+  const saveBudgetMutation = useMutation({
+    mutationFn: () => budgetApi.save({
+      category: budgetForm.category.trim() || null,
+      amount: Number(budgetForm.amount),
+      warning_threshold: Number(budgetForm.warning_threshold || 80),
+    }),
+    onSuccess: () => {
+      toast.success("Monthly budget saved.");
+      setBudgetForm({ category: "", amount: "", warning_threshold: "80" });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+    onError: (error) => toast.error(error.response?.data?.detail || "Could not save budget."),
+  });
+  const deleteBudgetMutation = useMutation({
+    mutationFn: (id) => budgetApi.remove(id),
+    onSuccess: () => {
+      toast.success("Budget removed.");
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    },
+    onError: (error) => toast.error(error.response?.data?.detail || "Could not remove budget."),
   });
 
   const transactions = transactionsQuery.data || [];
@@ -75,6 +107,87 @@ export function DashboardPage() {
           <MetricCard title="GST Tracked" value={current.gst} trend={trend.gst} tone="default" icon={ReceiptIndianRupee} />
         </div>
       )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <DueSummaryCard
+          title="Outstanding Receivables"
+          description="Money customers still owe you"
+          value={summaryQuery.data?.outstandingReceivables || 0}
+          tone="income"
+          icon={CircleDollarSign}
+        />
+        <DueSummaryCard
+          title="Outstanding Payables"
+          description="Money you still need to pay"
+          value={summaryQuery.data?.outstandingPayables || 0}
+          tone="expense"
+          icon={Wallet}
+        />
+      </div>
+
+      {canManageBudgets ? <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Monthly Budgets & Alerts</CardTitle>
+            <CardDescription>Leave category empty to set an overall expense limit.</CardDescription>
+          </div>
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto] md:items-end">
+            <div>
+              <Label>Category (optional)</Label>
+              <Input
+                placeholder="e.g. Rent"
+                value={budgetForm.category}
+                onChange={(event) => setBudgetForm((previous) => ({ ...previous, category: event.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Monthly limit</Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="10000"
+                value={budgetForm.amount}
+                onChange={(event) => setBudgetForm((previous) => ({ ...previous, amount: event.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Warn at %</Label>
+              <Input
+                type="number"
+                min="1"
+                max="100"
+                value={budgetForm.warning_threshold}
+                onChange={(event) => setBudgetForm((previous) => ({ ...previous, warning_threshold: event.target.value }))}
+              />
+            </div>
+            <Button
+              onClick={() => saveBudgetMutation.mutate()}
+              disabled={!Number(budgetForm.amount) || saveBudgetMutation.isPending}
+            >
+              Save budget
+            </Button>
+          </div>
+
+          {(budgetsQuery.data || []).length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+              No budget set for this month.
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {(budgetsQuery.data || []).map((budget) => (
+                <BudgetStatusCard
+                  key={budget.id}
+                  budget={budget}
+                  onRemove={() => deleteBudgetMutation.mutate(budget.id)}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card> : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <Card className="overflow-hidden">
@@ -224,5 +337,54 @@ function QuickAction({ icon: Icon, label, color, href, onClick }) {
     <button type="button" onClick={onClick}>
       {content}
     </button>
+  );
+}
+
+function BudgetStatusCard({ budget, onRemove }) {
+  const width = Math.min(Math.max(Number(budget.percentage) || 0, 0), 100);
+  const tone = budget.status === "exceeded"
+    ? "bg-expense"
+    : budget.status === "warning" ? "bg-amber-500" : "bg-income";
+  return (
+    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">{budget.label}</p>
+          <p className="text-sm text-slate-500">
+            {formatCurrency(budget.spent)} of {formatCurrency(budget.amount)} used
+          </p>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Remove budget">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${width}%` }} />
+      </div>
+      <div className="mt-2 flex justify-between text-xs">
+        <span className={budget.status === "safe" ? "text-slate-500" : "font-semibold text-amber-600"}>
+          {budget.status === "exceeded" ? "Budget exceeded" : budget.status === "warning" ? "Budget warning" : "Within budget"}
+        </span>
+        <span>{Number(budget.percentage).toFixed(1)}%</span>
+      </div>
+    </div>
+  );
+}
+
+function DueSummaryCard({ title, description, value, tone, icon: Icon }) {
+  const toneClass = tone === "income" ? "text-income bg-income/10" : "text-expense bg-expense/10";
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500 dark:text-slate-300">{title}</p>
+          <p className="mt-2 font-display text-2xl font-bold">{formatCurrency(value)}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</p>
+        </div>
+        <div className={`rounded-2xl p-3 ${toneClass}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </Card>
   );
 }

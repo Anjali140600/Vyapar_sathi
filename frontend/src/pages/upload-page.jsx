@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileImage, ScanSearch, UploadCloud, ZoomIn } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,13 +12,19 @@ import { multimodalApi, transactionApi } from "@/lib/api";
 
 export function UploadPage() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const routedScanHandled = useRef(false);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
+  const [scanSource, setScanSource] = useState("");
   const [fields, setFields] = useState({
     date: "",
     amount: "",
+    taxable_amount: "",
     gst_amount: "",
     vendor: "",
+    invoice_number: "",
+    gstin: "",
     category: "General",
     type: "purchase",
   });
@@ -27,6 +34,14 @@ export function UploadPage() {
     queryFn: () => transactionApi.getTypes().then((res) => res.data.types || []),
   });
 
+  useEffect(() => {
+    const extracted = location.state?.scannedBill;
+    if (!extracted || routedScanHandled.current) return;
+    routedScanHandled.current = true;
+    setFields(toFormFields(extracted));
+    setScanSource(extracted.llm_enhanced ? "AI-enhanced OCR" : "Basic OCR fallback");
+  }, [location.state]);
+
   const scanMutation = useMutation({
     mutationFn: async (nextFile) => {
       const upload = await multimodalApi.upload(nextFile, "");
@@ -35,17 +50,19 @@ export function UploadPage() {
     },
     onSuccess: (data) => {
       const extracted = data.extracted_data || {};
-      setFields({
-        date: normalizeDate(extracted.date),
-        amount: extracted.amount ?? "",
-        gst_amount: extracted.gst_amount ?? "",
-        vendor: extracted.vendor ?? "",
-        category: extracted.category || "General",
-        type: extracted.type === "expense" ? "purchase" : "sales",
-      });
-      toast.success("Bill scanned. Review the extracted fields before saving.");
+      setFields(toFormFields(extracted));
+      setScanSource(extracted.llm_enhanced ? "AI-enhanced OCR" : "Basic OCR fallback");
+      toast.success(
+        extracted.llm_enhanced
+          ? "Bill scanned and structured with AI. Review before saving."
+          : "Bill scanned with the reliable OCR fallback. Review before saving."
+      );
     },
-    onError: () => toast.error("Bill could not be read."),
+    onError: (error) => {
+      if (error.response?.status !== 401) {
+        toast.error(error.response?.data?.detail || "Bill could not be read.");
+      }
+    },
   });
 
   const saveMutation = useMutation({
@@ -56,7 +73,12 @@ export function UploadPage() {
         type: fields.type,
         quantity: null,
         gst_amount: Number(fields.gst_amount || 0) || null,
-        description: fields.vendor || null,
+        description:
+          [
+            fields.vendor,
+            fields.invoice_number ? `Invoice ${fields.invoice_number}` : "",
+            fields.gstin ? `GSTIN ${fields.gstin}` : "",
+          ].filter(Boolean).join(" · ") || null,
         date: fields.date || null,
       }),
     onSuccess: () => {
@@ -114,8 +136,11 @@ export function UploadPage() {
             {[
               ["Bill Date", "date"],
               ["Total Amount", "amount"],
+              ["Taxable Amount", "taxable_amount"],
               ["GST Amount", "gst_amount"],
               ["Vendor Name", "vendor"],
+              ["Invoice Number", "invoice_number"],
+              ["GSTIN", "gstin"],
               ["Category", "category"],
             ].map(([label, key]) => (
               <div key={key}>
@@ -153,9 +178,12 @@ export function UploadPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
               <div className="flex items-center gap-2 font-semibold">
                 <FileImage className="h-4 w-4 text-assistant" />
-                OCR preview notes
+                {scanSource || "OCR preview notes"}
               </div>
-              <p className="mt-2">Vendor name and GST amount are editable because the current OCR backend returns amount, date, category, and raw text most reliably.</p>
+              <p className="mt-2">
+                Every value remains editable. If AI extraction is unavailable or returns invalid data,
+                the original regex-based OCR result is used automatically.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -170,4 +198,18 @@ function normalizeDate(value) {
   const slash = value.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
   if (slash) return `${slash[3]}-${slash[2]}-${slash[1]}`;
   return "";
+}
+
+function toFormFields(extracted = {}) {
+  return {
+    date: normalizeDate(extracted.date),
+    amount: extracted.amount ?? "",
+    taxable_amount: extracted.taxable_amount ?? "",
+    gst_amount: extracted.gst_amount ?? "",
+    vendor: extracted.vendor ?? "",
+    invoice_number: extracted.invoice_number ?? "",
+    gstin: extracted.gstin ?? "",
+    category: extracted.category || "General",
+    type: extracted.type === "income" ? "sales" : "purchase",
+  };
 }

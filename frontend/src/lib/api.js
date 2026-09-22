@@ -1,21 +1,37 @@
 import axios from "axios";
 
-const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-
 const api = axios.create({
-  baseURL: configuredApiUrl
-    ? configuredApiUrl.replace(/\/$/, "")
-    : window.location.origin,
+  baseURL: window.location.origin,
 });
 
 api.interceptors.request.use((config) => {
-  config.headers["ngrok-skip-browser-warning"] = "true";
   const token = localStorage.getItem("vyaparSathiAuthToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const hadToken = Boolean(localStorage.getItem("vyaparSathiAuthToken"));
+    const isLoginRequest = error.config?.url?.includes("/api/auth/login");
+    if (error.response?.status === 401 && hadToken && !isLoginRequest) {
+      localStorage.removeItem("vyaparSathiAuthToken");
+      localStorage.removeItem("vyaparSathiAuthEmail");
+      localStorage.removeItem("vyaparSathiAuthRole");
+      sessionStorage.setItem(
+        "vyaparSathiAuthNotice",
+        "Your session expired. Please log in again, then upload the bill."
+      );
+      if (window.location.pathname !== "/") {
+        window.location.assign("/");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const authApi = {
   register: (payload) => api.post("/api/auth/register", payload),
@@ -24,6 +40,7 @@ export const authApi = {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     }),
   logout: () => api.post("/api/auth/logout"),
+  me: () => api.get("/api/auth/me"),
 };
 
 export const transactionApi = {
@@ -32,7 +49,20 @@ export const transactionApi = {
   create: (payload) => api.post("/api/transactions", payload),
   update: (id, payload) => api.put(`/api/transactions/${id}`, payload),
   remove: (id) => api.delete(`/api/transactions/${id}`),
+  dues: () => api.get("/api/dues"),
+  recordPayment: (id, amount) => api.post(`/api/transactions/${id}/payments`, { amount }),
   summary: () => api.get("/api/dashboard/summary"),
+};
+
+export const reportApi = {
+  download: (format, period = "6m") =>
+    api.get(`/api/reports/export/${format}?period=${period}`, { responseType: "blob" }),
+};
+
+export const budgetApi = {
+  list: (month) => api.get("/api/budgets", { params: month ? { month } : {} }),
+  save: (payload) => api.post("/api/budgets", payload),
+  remove: (id) => api.delete(`/api/budgets/${id}`),
 };
 
 export const chatApi = {

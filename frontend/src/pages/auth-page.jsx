@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Bot, Landmark, ShieldCheck, Sparkles, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,6 +28,13 @@ export function AuthPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  useEffect(() => {
+    const notice = sessionStorage.getItem("vyaparSathiAuthNotice");
+    if (!notice) return;
+    sessionStorage.removeItem("vyaparSathiAuthNotice");
+    toast.error(notice);
+  }, []);
+
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -41,7 +48,7 @@ export function AuthPage() {
   const loginMutation = useMutation({
     mutationFn: (values) => authApi.login({ username: values.email, password: values.password }),
     onSuccess: (response, values) => {
-      login(response.data.accessToken, values.email);
+      login(response.data.accessToken, values.email, response.data.role);
       toast.success("Welcome back to Vyapar Sathi.");
       navigate("/dashboard");
     },
@@ -57,7 +64,6 @@ export function AuthPage() {
     },
     onError: (error) => toast.error(error.response?.data?.detail || "Could not create your account."),
   });
-
 
   return (
     <div className="min-h-screen bg-slateDeep px-4 py-6 text-white md:px-10">
@@ -171,6 +177,19 @@ export function AuthPage() {
                 </form>
               )}
 
+              <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-slate-400">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                Or continue with
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => toast.info("Google OAuth button is ready in the UI. The current backend does not expose a Google auth endpoint yet.")}
+              >
+                Continue with Google
+              </Button>
             </Card>
           </div>
         </section>

@@ -22,13 +22,14 @@ const navItems = [
   { label: "Transactions", to: "/transactions", icon: ReceiptText },
   { label: "Assistant", to: "/assistant", icon: Bot },
   { label: "Upload", to: "/upload", icon: FileText },
-  { label: "Reports", to: "/reports", icon: BarChart3 },
+  { label: "Reports", to: "/reports", icon: BarChart3, roles: ["owner", "accountant"] },
 ];
 
 export function AppShell({ children }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { email, logout } = useAuth();
+  const { email, role, logout } = useAuth();
+  const visibleNavItems = navItems.filter((item) => !item.roles || item.roles.includes(role));
   const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
@@ -52,7 +53,7 @@ export function AppShell({ children }) {
           </div>
 
           <div className="mt-8 space-y-1">
-            {navItems.map(({ label, to, icon: Icon }) => (
+            {visibleNavItems.map(({ label, to, icon: Icon }) => (
               <NavItem key={to} to={to} icon={Icon} label={label} />
             ))}
           </div>
@@ -67,7 +68,7 @@ export function AppShell({ children }) {
           <div className="mt-auto flex h-[40vh] flex-col justify-end gap-3 px-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-sm font-semibold">{email}</p>
-              <p className="text-xs text-slate-300">Private and secure account</p>
+              <p className="text-xs capitalize text-slate-300">{role} account</p>
             </div>
             <Button variant="secondary" className="w-full justify-start" onClick={toggleTheme}>
               {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -107,7 +108,7 @@ export function AppShell({ children }) {
 
       <nav className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-white/30 bg-white/85 p-2 shadow-soft backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 md:hidden">
         <div className="grid grid-cols-5 gap-1">
-          {navItems.map(({ label, to, icon: Icon }) => (
+          {visibleNavItems.map(({ label, to, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

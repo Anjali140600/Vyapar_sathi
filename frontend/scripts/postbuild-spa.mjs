@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const publicDir = path.resolve("public");
+const publicDir = path.resolve("../backend/static");
 const indexHtml = path.join(publicDir, "index.html");
 const routes = ["dashboard", "transactions", "assistant", "upload", "reports"];
 

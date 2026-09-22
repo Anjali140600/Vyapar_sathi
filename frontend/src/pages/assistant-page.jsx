@@ -150,9 +150,6 @@ export function AssistantPage() {
   const sessionsQuery = useQuery({
     queryKey: ["chat-sessions"],
     queryFn: () => chatApi.sessions().then((res) => res.data.data || []),
-    refetchOnWindowFocus: true,
-    refetchInterval: 5000,   // poll every 5 s so sidebar always stays fresh
-    staleTime: 0,
   });
 
   const historyQuery = useQuery({
@@ -182,7 +179,7 @@ export function AssistantPage() {
   const uploadMutation = useMutation({
     mutationFn: async ({ file, kind }) => {
       const upload = await multimodalApi.upload(file, currentSessionId || "");
-      if (kind === "bill") {
+      if (kind === "image") {
         const result = await multimodalApi.ocr(upload.data.id);
         return { kind, result: result.data };
       }
@@ -190,16 +187,25 @@ export function AssistantPage() {
       return { kind, result: result.data };
     },
     onSuccess: ({ kind, result }) => {
-      if (kind === "voice") {
-        setDraft(result.transcript || "");
-        toast.success("Voice note transcribed. Review and send it.");
-      } else {
-        toast.success("Bill processed. OCR result added to the conversation.");
-        sendMutation.mutate({
-          message: `Bill OCR result: ${result.text || "Processed bill"} Amount ${result.extracted_data?.amount || ""}`,
-          sessionId: currentSessionId,
-        });
+      const recognizedText = kind === "voice"
+        ? result.transcript || ""
+        : result.text || result.extracted_data?.raw_text || "";
+
+      if (!recognizedText.trim()) {
+        toast.error(
+          kind === "voice"
+            ? "No speech was recognized."
+            : "No readable text was found in the image."
+        );
+        return;
       }
+
+      setDraft(recognizedText.trim());
+      toast.success(
+        kind === "voice"
+          ? "Voice converted to text. Review and send it."
+          : "Image converted to text. Review and send it."
+      );
     },
     onError: () => toast.error("File could not be processed."),
   });
@@ -333,11 +339,11 @@ export function AssistantPage() {
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {/* Upload Bill */}
               <UploadButton
-                label="Upload Bill"
+                label="Upload Image"
                 icon={FileUp}
                 accept="image/*"
                 disabled={isInputBusy}
-                onChange={(file) => uploadMutation.mutate({ file, kind: "bill" })}
+                onChange={(file) => uploadMutation.mutate({ file, kind: "image" })}
               />
 
               {/* Upload Voice file */}

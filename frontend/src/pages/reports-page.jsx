@@ -9,13 +9,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/shared/page-header";
 import { formatCurrency } from "@/lib/format";
 import { groupLastSixMonths, summarizeTransactions, topCategories } from "@/lib/insights";
-import { transactionApi } from "@/lib/api";
+import { reportApi, transactionApi } from "@/lib/api";
 
 const colors = ["#10B981", "#0EA5E9", "#F59E0B", "#F43F5E", "#6366F1", "#8B5CF6"];
 const colorClasses = ["bg-income", "bg-assistant", "bg-insight", "bg-expense", "bg-indigo-500", "bg-violet-500"];
 
 export function ReportsPage() {
   const [monthFilter, setMonthFilter] = useState("6m");
+  const [exporting, setExporting] = useState("");
   const transactionsQuery = useQuery({
     queryKey: ["transactions"],
     queryFn: () => transactionApi.list().then((res) => res.data.data || []),
@@ -26,6 +27,27 @@ export function ReportsPage() {
   const totals = useMemo(() => summarizeTransactions(transactions), [transactions]);
   const expenseCategories = useMemo(() => topCategories(transactions, "expense").slice(0, 5), [transactions]);
   const incomeCategories = useMemo(() => topCategories(transactions, "income").slice(0, 5), [transactions]);
+
+  const downloadReport = async (format) => {
+    setExporting(format);
+    try {
+      const response = await reportApi.download(format, monthFilter);
+      const extension = format === "pdf" ? "pdf" : "xlsx";
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vyapar-sathi-report-${new Date().toISOString().slice(0, 10)}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`${extension.toUpperCase()} report downloaded.`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Could not export the report.");
+    } finally {
+      setExporting("");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -43,9 +65,13 @@ export function ReportsPage() {
               <option value="3m">Last 3 months</option>
               <option value="1m">This month</option>
             </select>
-            <Button variant="outline" onClick={() => toast.info("Export buttons are ready in the UI. Connect a PDF/CSV backend endpoint when available.")}>
+            <Button variant="outline" disabled={Boolean(exporting)} onClick={() => downloadReport("pdf")}>
               <Download className="h-4 w-4" />
-              Export PDF / CSV
+              {exporting === "pdf" ? "Exporting..." : "PDF"}
+            </Button>
+            <Button variant="outline" disabled={Boolean(exporting)} onClick={() => downloadReport("xlsx")}>
+              <Download className="h-4 w-4" />
+              {exporting === "xlsx" ? "Exporting..." : "Excel"}
             </Button>
           </>
         }

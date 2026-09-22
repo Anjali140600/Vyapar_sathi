@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Pencil, Search, Trash2 } from "lucide-react";
+import { Copy, HandCoins, Pencil, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +13,13 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { transactionApi } from "@/lib/api";
 import { summarizeTransactions } from "@/lib/insights";
 import { useForm } from "react-hook-form";
+import { useAuth } from "@/providers/auth-provider";
 
 export function TransactionsPage() {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const canEdit = role === "owner" || role === "accountant";
+  const canDelete = role === "owner";
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [duplicateSeed, setDuplicateSeed] = useState(null);
@@ -68,6 +72,16 @@ export function TransactionsPage() {
       setDeleteItem(null);
     },
     onError: (error) => toast.error(error.response?.data?.detail || "Could not delete transaction."),
+  });
+
+  const settleMutation = useMutation({
+    mutationFn: (item) => transactionApi.recordPayment(item.id, Number(item.amount_due)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      toast.success("Outstanding balance marked as paid.");
+    },
+    onError: (error) => toast.error(error.response?.data?.detail || "Could not record payment."),
   });
 
   return (
@@ -145,6 +159,7 @@ export function TransactionsPage() {
                         <th className="pb-3 font-medium">Type</th>
                         <th className="pb-3 font-medium text-right">Amount</th>
                         <th className="pb-3 font-medium text-right">GST</th>
+                        <th className="pb-3 font-medium text-right">Payment</th>
                         <th className="pb-3 font-medium">Note</th>
                         <th className="pb-3 font-medium text-right">Actions</th>
                       </tr>
@@ -153,7 +168,19 @@ export function TransactionsPage() {
                       {filtered.map((item) => (
                         <tr key={item.id} className="border-b border-slate-100 dark:border-slate-900">
                           <td className="py-3">{formatDate(item.transaction_date)}</td>
-                          <td className="py-3 font-medium">{item.category}</td>
+                          <td className="py-3 font-medium">
+                            <span>{item.category}</span>
+                            {item.is_recurring ? (
+                              <span className="ml-2 rounded-full bg-assistant/10 px-2 py-1 text-xs font-medium text-assistant">
+                                {item.frequency}
+                              </span>
+                            ) : null}
+                            {item.recurring_parent_id ? (
+                              <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800">
+                                Auto
+                              </span>
+                            ) : null}
+                          </td>
                           <td className="py-3 capitalize text-slate-500">{item.transaction_type}</td>
                           <td className="py-3 text-right">
                             <span className={`data-chip ${Number(item.amount) > 0 ? "bg-income/10 text-income" : "bg-expense/10 text-expense"}`}>
@@ -161,10 +188,21 @@ export function TransactionsPage() {
                             </span>
                           </td>
                           <td className="py-3 text-right">{formatCurrency(item.gst_amount)}</td>
+                          <td className="py-3 text-right">
+                            <p className="text-xs text-slate-500">Paid {formatCurrency(item.amount_paid)}</p>
+                            {Number(item.amount_due) > 0 ? (
+                              <p className="mt-1 font-semibold text-expense">
+                                Due {formatCurrency(item.amount_due)}
+                                {item.due_date ? ` · ${formatDate(item.due_date)}` : ""}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs font-semibold text-income">Paid</p>
+                            )}
+                          </td>
                           <td className="py-3 text-slate-500">{item.description || "—"}</td>
                           <td className="py-3">
                             <div className="flex justify-end gap-2">
-                              <ActionIcon
+                              {canEdit ? <ActionIcon
                                 icon={Pencil}
                                 label="Edit"
                                 onClick={() =>
@@ -179,9 +217,15 @@ export function TransactionsPage() {
                                     category: item.category,
                                     description: item.description || "",
                                     payment_method: "cash",
+                                    has_due: Number(item.amount_due) > 0,
+                                    amount_paid: item.amount_paid ?? item.amount,
+                                    due_date: item.due_date?.split("T")[0] || "",
+                                    is_recurring: Boolean(item.is_recurring),
+                                    frequency: item.frequency || "monthly",
+                                    next_run_date: item.next_run_date?.split("T")[0] || "",
                                   })
                                 }
-                              />
+                              /> : null}
                               <ActionIcon
                                 icon={Copy}
                                 label="Duplicate"
@@ -196,10 +240,23 @@ export function TransactionsPage() {
                                     category: item.category,
                                     description: item.description,
                                     payment_method: "cash",
+                                    has_due: false,
+                                    amount_paid: "",
+                                    due_date: "",
+                                    is_recurring: false,
+                                    frequency: "monthly",
+                                    next_run_date: "",
                                   })
                                 }
                               />
-                              <ActionIcon icon={Trash2} label="Delete" onClick={() => setDeleteItem(item)} />
+                              {canEdit && Number(item.amount_due) > 0 ? (
+                                <ActionIcon
+                                  icon={HandCoins}
+                                  label="Mark fully paid"
+                                  onClick={() => settleMutation.mutate(item)}
+                                />
+                              ) : null}
+                              {canDelete ? <ActionIcon icon={Trash2} label="Delete" onClick={() => setDeleteItem(item)} /> : null}
                             </div>
                           </td>
                         </tr>
@@ -281,6 +338,8 @@ function EditTransactionForm({ item, types, onSubmit, pending }) {
   });
 
   const direction = form.watch("money_direction");
+  const hasDue = form.watch("has_due");
+  const isRecurring = form.watch("is_recurring");
   const filteredTypes = types.filter((entry) => entry.flow === (direction === "received" ? "in" : "out"));
 
   return (
@@ -323,6 +382,45 @@ function EditTransactionForm({ item, types, onSubmit, pending }) {
         <Input placeholder="Category" {...form.register("category")} />
       </div>
       <Input placeholder="Note" {...form.register("description")} />
+      <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+        <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            {...form.register("has_due")}
+          />
+          Payment pending / Udhaar
+        </label>
+        {hasDue ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Input type="number" min="0" step="0.01" placeholder="Amount paid" {...form.register("amount_paid")} />
+            <Input type="date" title="Due date" {...form.register("due_date")} />
+          </div>
+        ) : null}
+      </div>
+      <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+        <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            {...form.register("is_recurring")}
+          />
+          Repeat this transaction automatically
+        </label>
+        {isRecurring ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white/70 px-3 text-sm dark:border-slate-700 dark:bg-slate-950/50"
+              {...form.register("frequency")}
+            >
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+            <Input type="date" title="Next repeat date" {...form.register("next_run_date")} />
+          </div>
+        ) : null}
+      </div>
       <div className="flex justify-end">
         <Button type="submit">{pending ? "Saving..." : "Save Changes"}</Button>
       </div>

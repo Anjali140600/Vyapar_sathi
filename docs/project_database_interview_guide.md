@@ -8,11 +8,11 @@
 - The filesystem also stores uploaded files in the `uploads/` folder, but that is not a database.
 
 ### Where is MySQL configured?
-- `app/core/database.py` creates the SQLAlchemy engine and session.
+- `backend/app/core/database.py` creates the SQLAlchemy engine and session.
 - `.env` contains `DATABASE_URL=mysql+pymysql://...`.
 
 ### Where is ChromaDB used?
-- `app/services/rag_service.py` creates `chromadb.PersistentClient(path="modules/module_1_rag/chroma_db")`.
+- `backend/app/services/rag_service.py` creates a persistent ChromaDB client using `python_services/rag/chroma_db`.
 - PDF chunks are added to the `knowledge_base` collection.
 
 ### How the full project works step by step

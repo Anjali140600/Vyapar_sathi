@@ -31,13 +31,13 @@ Vyapar Sathi is a React plus FastAPI application built for Indian small business
 
 | Feature | What It Does | Main Files |
 | --- | --- | --- |
-| Authentication | Registers users, logs them in, returns JWT token | `app/api/auth_router.py`, `app/core/security.py` |
+| Authentication | Registers users, logs them in, returns JWT token | `backend/app/api/auth_router.py`, `backend/app/core/security.py` |
 | Dashboard | Shows business KPIs and quick actions | `frontend/src/pages/dashboard-page.jsx` |
-| Transactions | CRUD for income and expense records | `frontend/src/pages/transactions-page.jsx`, `app/api/transaction_router.py` |
-| Assistant | Chat with business data and GST knowledge | `frontend/src/pages/assistant-page.jsx`, `app/api/chat_router.py` |
-| OCR | Reads bills and extracts structured values | `app/services/ocr_service.py`, `app/api/multimodal_router.py` |
-| STT | Converts uploaded or live-recorded audio to text | `app/services/stt_service.py`, `app/api/multimodal_router.py` |
-| RAG | Retrieves GST knowledge from document chunks | `app/services/rag_service.py` |
+| Transactions | CRUD for income and expense records | `frontend/src/pages/transactions-page.jsx`, `backend/app/api/transaction_router.py` |
+| Assistant | Chat with business data and GST knowledge | `frontend/src/pages/assistant-page.jsx`, `backend/app/api/chat_router.py` |
+| OCR | Reads bills and extracts structured values | `backend/app/services/ocr_service.py`, `backend/app/api/multimodal_router.py` |
+| STT | Converts uploaded or live-recorded audio to text | `backend/app/services/stt_service.py`, `backend/app/api/multimodal_router.py` |
+| RAG | Retrieves GST knowledge from document chunks | `backend/app/services/rag_service.py` |
 | Reports | Builds charts and insight views from transaction data | `frontend/src/pages/reports-page.jsx` |
 
 ## 4. Tech Stack Overview
@@ -87,15 +87,15 @@ Vyapar Sathi is a React plus FastAPI application built for Indian small business
 
 The active full-stack application uses:
 
-- `frontend/` for the React frontend
-- `app/` for the FastAPI backend
+- `frontend/src/` for the React frontend
+- `backend/app/` for the FastAPI backend
 - `docs/` for interview and revision material
 - `uploads/` for uploaded files
 
 There are older prototype folders such as `step-1`, `step2-multimodal (1)`, and `step3-query-classifier`, but the main live system is the integrated React plus FastAPI app.
 
 > [Revision Box] Important Clarification
-> If someone asks which code is the main project, answer: the current integrated project is in `frontend/` and `app/`. The `step-*` folders are previous development stages and experiments.
+> If someone asks which code is the main project, answer: the current integrated project is in `frontend/`, `backend/`, and `python_services/`. The `legacy/` folder contains previous development stages and experiments.
 
 ## 6. Frontend Architecture
 
@@ -103,7 +103,7 @@ The frontend is a single-page React application.
 
 ### App startup
 
-The frontend entry file `frontend/src/main.jsx` wraps the app with:
+The file `frontend/src/main.jsx` wraps the app with:
 
 - `ThemeProvider`
 - `QueryClientProvider`
@@ -143,12 +143,12 @@ Protected pages are wrapped in `ProtectedRoute`, so users must be logged in to a
 
 The backend is layered cleanly:
 
-- `app/main.py` -> FastAPI entry point
-- `app/api/` -> route handlers
-- `app/core/` -> database setup and security
-- `app/models/` -> SQLAlchemy tables
-- `app/schemas/` -> request and response schemas
-- `app/services/` -> business logic and orchestration
+- `backend/app/main.py` -> FastAPI entry point
+- `backend/app/api/` -> route handlers
+- `backend/app/core/` -> database setup and security
+- `backend/app/models/` -> SQLAlchemy tables
+- `backend/app/schemas/` -> request and response schemas
+- `backend/app/services/` -> business logic and orchestration
 
 This separation is one of the strongest architecture points in the project because it avoids mixing database logic, request validation, and business logic in the same file.
 
@@ -209,7 +209,7 @@ Because this project is reporting-heavy and relational. Exact aggregation, struc
 
 ## 10. Request and Response Schemas
 
-The project uses Pydantic schemas in `app/schemas/schemas.py`.
+The project uses Pydantic schemas in `backend/app/schemas/schemas.py`.
 
 Important schemas:
 
@@ -254,8 +254,8 @@ I used SQLAlchemy models for database structure and Pydantic schemas for request
 
 ### Important files
 
-- `app/api/auth_router.py`
-- `app/core/security.py`
+- `backend/app/api/auth_router.py`
+- `backend/app/core/security.py`
 - `frontend/src/providers/auth-provider.jsx`
 - `frontend/src/lib/api.js`
 
@@ -434,7 +434,7 @@ The assistant does not answer every query using the same method. It first decide
 
 ## 19. DataService Logic
 
-`app/services/data_service.py` handles business-data answers from MySQL.
+`backend/app/services/data_service.py` handles business-data answers from MySQL.
 
 It can answer:
 
@@ -482,7 +482,7 @@ FAISS is powerful but lower-level. ChromaDB is easier to use as a persistent app
 
 ## 21. OCR Bill Processing
 
-OCR is handled by `app/services/ocr_service.py`.
+OCR is handled by `backend/app/services/ocr_service.py`.
 
 ### OCR flow
 
@@ -556,7 +556,7 @@ This makes the chat state persistent rather than temporary.
 
 ## 24. Multimodal API Surface
 
-Important endpoints in `app/api/multimodal_router.py`:
+Important endpoints in `backend/app/api/multimodal_router.py`:
 
 - `POST /api/upload`
 - `POST /api/ocr`
@@ -588,7 +588,7 @@ This is a safer design for business data because it reduces hallucination risk.
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-npm --prefix frontend install
+npm install
 ```
 
 ### Database setup
@@ -609,13 +609,13 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 Frontend terminal:
 
 ```text
-npm --prefix frontend run dev
+npm run dev
 ```
 
 ### Production-like local run
 
 ```text
-npm --prefix frontend run build
+npm run build
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -722,21 +722,21 @@ The browser records audio with MediaRecorder, stores chunks in memory, sends the
 
 | File | Why It Matters |
 | --- | --- |
-| `app/main.py` | Backend entry point |
-| `app/core/database.py` | MySQL engine and session setup |
-| `app/core/security.py` | Hashing, JWT, current user |
-| `app/api/auth_router.py` | Register and login |
-| `app/api/transaction_router.py` | Transaction CRUD and dashboard summary |
-| `app/api/chat_router.py` | Chat sessions, history, and send |
-| `app/api/multimodal_router.py` | Upload, OCR, STT, direct multimodal input |
-| `app/models/schema.py` | SQLAlchemy tables |
-| `app/schemas/schemas.py` | Pydantic request and response schemas |
-| `app/services/data_service.py` | MySQL business logic |
-| `app/services/classifier_service.py` | Query type detection |
-| `app/services/rag_service.py` | GST retrieval |
-| `app/services/ocr_service.py` | Bill OCR |
-| `app/services/stt_service.py` | Whisper transcription |
-| `app/services/chat_orchestrator.py` | Central AI orchestration |
+| `backend/app/main.py` | Backend entry point |
+| `backend/app/core/database.py` | MySQL engine and session setup |
+| `backend/app/core/security.py` | Hashing, JWT, current user |
+| `backend/app/api/auth_router.py` | Register and login |
+| `backend/app/api/transaction_router.py` | Transaction CRUD and dashboard summary |
+| `backend/app/api/chat_router.py` | Chat sessions, history, and send |
+| `backend/app/api/multimodal_router.py` | Upload, OCR, STT, direct multimodal input |
+| `backend/app/models/schema.py` | SQLAlchemy tables |
+| `backend/app/schemas/schemas.py` | Pydantic request and response schemas |
+| `backend/app/services/data_service.py` | MySQL business logic |
+| `backend/app/services/classifier_service.py` | Query type detection |
+| `backend/app/services/rag_service.py` | GST retrieval |
+| `backend/app/services/ocr_service.py` | Bill OCR |
+| `backend/app/services/stt_service.py` | Whisper transcription |
+| `backend/app/services/chat_orchestrator.py` | Central AI orchestration |
 | `frontend/src/App.jsx` | Frontend route map |
 | `frontend/src/lib/api.js` | Frontend API layer |
 | `frontend/src/providers/auth-provider.jsx` | Frontend auth state |
